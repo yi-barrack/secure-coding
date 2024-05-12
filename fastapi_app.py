@@ -100,23 +100,26 @@ def authenticate_user(conn, username, password):
 
 def get_all_products(conn, category: Optional[str] = None, search: Optional[str] = None):
     cursor = conn.cursor()
-    query = 'SELECT * FROM products'
+
+    # 초기 쿼리 및 파라미터 설정
+    query = 'SELECT * FROM products WHERE 1=1'
     params = []
 
+    # 카테고리가 제공된 경우
     if category:
-        query += ' WHERE category = ?'
+        query += ' AND category = ?'
         params.append(category)
 
+    # 검색어가 제공된 경우
     if search:
-        if category:
-            query += ' AND name LIKE ?'
-        else:
-            query += ' WHERE name LIKE ?'
+        query += ' AND name LIKE ?'
         params.append('%' + search + '%')
 
+    # 쿼리 실행
     cursor.execute(query, params)
     products = cursor.fetchall()
 
+    # 결과 반환
     return [{"id": product[0], "name": product[1], "category": product[2], "price": product[3],
              "thumbnail_url": product[4]} for product in products]
 
