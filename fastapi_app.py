@@ -38,7 +38,7 @@ def create_tables(conn):
 
 salt = "saltsaltsalt"
 LOGIN_ATTEMPT_LIMIT = 10
-LOCK_TIME = 60 # lock 시간 
+LOCK_TIME = 600 # lock 시간 
 
 def add_user(conn, username, password, role, full_name, address, payment_info):
     hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()
@@ -68,9 +68,9 @@ def authenticate_user(conn, username, password):
 
     if user:
         if user[8] > time.time():
-            raise HTTPException(status_code=401, detail="Account is locked. Please try again later.")
+            raise HTTPException(status_code=402, detail="Account is locked. Please try again later.")
 
-        if user[7] >= LOGIN_ATTEMPT_LIMIT:
+        elif user[7] >= LOGIN_ATTEMPT_LIMIT:
             # 로그인 시도 횟수 초기화
             cursor.execute('UPDATE users SET login_attempts = 0 WHERE username = ?', (username,))
             conn.commit()
@@ -83,7 +83,7 @@ def authenticate_user(conn, username, password):
             raise HTTPException(status_code=401, detail="Too many login attempts. Account is locked.")
 
         # 비밀번호 확인
-        if user[2] == hashed_password:
+        elif user[2] == hashed_password:
             # 해쉬된 비번이면
             cursor.execute('UPDATE users SET login_attempts = 0 WHERE username = ?', (username,))
             conn.commit()

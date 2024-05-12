@@ -21,6 +21,8 @@ def main():
                     st.session_state.user = response.json()["user"]
                     st.success(response.json()["message"])
                     st.rerun()
+                elif response.status_code == 402:
+                    st.error("This account is locked.")
                 else:
                     st.error("Invalid username or password.")
         with col2:
