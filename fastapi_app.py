@@ -132,6 +132,8 @@ async def startup_event():
 @app.get("/register")
 async def register_user(username: str, password: str, role: str, full_name: str, address: Optional[str] = None, payment_info: Optional[str] = None):
     conn = create_connection()
+    if role=="admin":
+        raise HTTPException(status_code=400, detail="invalid user role.")
     result = add_user(conn, username, password, role, full_name, address, payment_info)
     conn.close()
     return result
