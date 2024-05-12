@@ -38,7 +38,7 @@ def create_tables(conn):
 
 salt = "saltsaltsalt"
 LOGIN_ATTEMPT_LIMIT = 10
-LOCK_TIME = 600 # lock 시간 
+LOCK_TIME = 60 # lock 시간 
 
 def add_user(conn, username, password, role, full_name, address, payment_info):
     hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()
@@ -59,28 +59,39 @@ def register_admin(conn, username, password, full_name):
     return {"message": "Admin registered successfully!", "user": user}
 
 def authenticate_user(conn, username, password):
-    hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()  # 솔트, 해쉬 적용
+    hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, hashed_password)) # SQLI 공격을 방지하기 위해 파라미터 수정(캠슐화)
+
+    # 사용자 이름으로 사용자 정보 가져오기
+    cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
     user = cursor.fetchone()
+
     if user:
         if user[8] > time.time():
             raise HTTPException(status_code=401, detail="Account is locked. Please try again later.")
 
         if user[7] >= LOGIN_ATTEMPT_LIMIT:
-            # 계정 잠구기
-            cursor.execute('UPDATE users SET locked_until = ?, login_attempts = 0 WHERE username = ?', (time.time() + LOCK_TIME, username))
+            # 로그인 시도 횟수 초기화
+            cursor.execute('UPDATE users SET login_attempts = 0 WHERE username = ?', (username,))
             conn.commit()
+
+            # 계정 잠금
+            cursor.execute('UPDATE users SET locked_until = ? WHERE username = ?', 
+                           (time.time() + LOCK_TIME, username))
+            conn.commit()
+
             raise HTTPException(status_code=401, detail="Too many login attempts. Account is locked.")
 
+        # 비밀번호 확인
         if user[2] == hashed_password:
             # 해쉬된 비번이면
             cursor.execute('UPDATE users SET login_attempts = 0 WHERE username = ?', (username,))
             conn.commit()
-            user_info = {"username": user[1], "password": user[2], "role": user[3], "full_name": user[4], 
-                        "address": user[5], "payment_info": user[6]}
+            user_info = {"username": user[1], "password": user[2], "role": user[3], "full_name": user[4],
+                          "address": user[5], "payment_info": user[6]}
             return {"message": f"Welcome back, {username}!", "user": user_info}
-        else :
+        else:
+            # 비밀번호 틀린 경우
             cursor.execute('UPDATE users SET login_attempts = login_attempts + 1 WHERE username = ?', (username,))
             conn.commit()
             raise HTTPException(status_code=401, detail="Invalid username or password")
