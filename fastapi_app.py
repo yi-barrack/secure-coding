@@ -1,4 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.responses import JSONResponse
 from typing import List, Optional
 import sqlite3
 import hashlib
@@ -123,6 +125,19 @@ def get_all_products(conn, category: Optional[str] = None, search: Optional[str]
     return [{"id": product[0], "name": product[1], "category": product[2], "price": product[3],
              "thumbnail_url": product[4]} for product in products]
 
+def get_product_details(conn, product_id: int):
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+    product = cursor.fetchone()
+    if product:
+        return {
+            "name": product[1],
+            "category": product[2],
+            "price": product[3],
+            "thumbnail_url": product[4]
+        }
+    return None
+
 def add_product(conn, name, category, price, thumbnail_url):
     cursor = conn.cursor()
     cursor.execute('INSERT INTO products (name, category, price, thumbnail_url) VALUES (?, ?, ?, ?)', (name, category, price, thumbnail_url))
@@ -170,6 +185,15 @@ async def get_products():
     products = get_all_products(conn)
     conn.close()
     return products
+
+@app.get("/products/{product_id}", response_model=dict)
+async def get_product_details_endpoint(product_id: int, conn: sqlite3.Connection = Depends(create_connection)):
+    product = get_product_details(conn, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
+
 
 @app.get("/add_product")
 async def add_new_product(name: str, category: str, price: float, thumbnail_url: str):
