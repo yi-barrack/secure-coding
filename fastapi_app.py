@@ -193,8 +193,6 @@ async def get_product_details_endpoint(product_id: int, conn: sqlite3.Connection
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
-
-
 @app.get("/add_product")
 async def add_new_product(name: str, category: str, price: float, thumbnail_url: str):
     conn = create_connection()

@@ -52,7 +52,18 @@ def main():
                 for product in products:
                     st.write(f"Name: {product['name']}, Category: {product['category']}, Price: ${product['price']}")
                     if 'thumbnail_url' in product and product['thumbnail_url'] != '':
-                        st.image(product['thumbnail_url'], width=200)
+                        # 이미지를 클릭했을 때 상세 정보 가져오기
+                        if st.image(product['thumbnail_url'], width=200, use_column_width=False, output_format="JPEG"):
+                            product_details_response = requests.get(f'http://localhost:8000/products/{product["id"]}')
+                            if product_details_response.status_code == 200:
+                                product_details = product_details_response.json()
+                                st.write("Product Details:")
+                                st.write(f"Name: {product_details['name']}")
+                                st.write(f"Category: {product_details['category']}")
+                                st.write(f"Price: ${product_details['price']}")
+                                st.write("Thumbnail URL:", product_details['thumbnail_url'])
+                            else:
+                                st.error("Failed to fetch product details.")
 
             elif choice == 'Add Product':
                 st.subheader('Add a New Product')
