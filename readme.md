@@ -4,6 +4,8 @@ Tiny Shopping Mall Website.
 
 You should add some functions and complete the security requirements.
 
+과제를 내주신 환경과 바뀐게 없다. 동일한 환경에서 구성.
+
 ## requirements
 
 if you don't have a miniconda(or anaconda), you can install it on this url.
