@@ -98,11 +98,27 @@ def authenticate_user(conn, username, password):
     else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-def get_all_products(conn):
+def get_all_products(conn, category: Optional[str] = None, search: Optional[str] = None):
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM products')
+    query = 'SELECT * FROM products'
+    params = []
+
+    if category:
+        query += ' WHERE category = ?'
+        params.append(category)
+
+    if search:
+        if category:
+            query += ' AND name LIKE ?'
+        else:
+            query += ' WHERE name LIKE ?'
+        params.append('%' + search + '%')
+
+    cursor.execute(query, params)
     products = cursor.fetchall()
-    return [{"name": product[1], "category": product[2], "price": product[3], "thumbnail_url": product[4]} for product in products]
+
+    return [{"id": product[0], "name": product[1], "category": product[2], "price": product[3],
+             "thumbnail_url": product[4]} for product in products]
 
 def add_product(conn, name, category, price, thumbnail_url):
     cursor = conn.cursor()
