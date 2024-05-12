@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from typing import List, Optional
 import sqlite3
+import hashlib
 
 app = FastAPI()
 
@@ -32,16 +33,20 @@ def create_tables(conn):
     ''')
     conn.commit()
 
+salt = "saltsaltsalt"
+
 def add_user(conn, username, password, role, full_name, address, payment_info):
+    hashed_password = hashlib.sha256((password + salt).encode()).hexdigest() # 솔트, 해쉬 적용
     cursor = conn.cursor()
     cursor.execute(f'INSERT INTO users (username, password, role, full_name, address, payment_info) VALUES (?, ?, ?, ?, ?, ?)',
-                   (username, password, role, full_name, address, payment_info))
+                   (username, hashed_password, role, full_name, address, payment_info))
     conn.commit()
-    user = {"username": username, "password": password, "role": role, "full_name": full_name, "address": address, "payment_info": payment_info}
+    user = {"username": username, "password": hashed_password, "role": role, "full_name": full_name, "address": address, "payment_info": payment_info}
     return {"message": "User created successfully!", "user": user}
 
 def register_admin(conn, username, password, full_name):
     cursor = conn.cursor()
+    password = hashlib.sha256((password + salt).encode()).hexdigest() # 솔트, 해쉬 적용
     cursor.execute('INSERT INTO users (username, password, role, full_name) VALUES (?, ?, ?, ?)',
                    (username, password, 'admin', full_name))
     conn.commit()
@@ -49,8 +54,9 @@ def register_admin(conn, username, password, full_name):
     return {"message": "Admin registered successfully!", "user": user}
 
 def authenticate_user(conn, username, password):
+    hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()  # 솔트, 해쉬 적용
     cursor = conn.cursor()
-    cursor.execute(f'SELECT * FROM users WHERE username = "{username}" AND password = "{password}"')
+    cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, hashed_password)) # SQLI 공격을 방지하기 위해 파라미터 수정(캠슐화)
     user = cursor.fetchone()
     if user:
         user_info = {"username": user[1], "password": user[2], "role": user[3], "full_name": user[4], "address": user[5], "payment_info": user[6]}
